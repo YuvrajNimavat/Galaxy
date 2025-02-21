@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Galaxy Animation with Dynamic Planets and Meteors</title>
+    <style>
+        /* Sets up the basic page layout with a space-like gradient background */
+        body {
+            margin: 0;
+            overflow-x: hidden; /* Changed to allow vertical scrolling */
+            background: radial-gradient(circle at center, #1a1a40, #000000);
+            width: 90vh;
+            height: 90vh;
+            object-fit: cover;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Container for background stars that twinkle and move */
+        .stars {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Individual star styling with animations for twinkling and movement */
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 6s infinite alternate ease-in-out, moveStars 15s infinite linear;
+        }
+
+        /* Animation for stars fading in and out */
+        @keyframes twinkle {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Animation for stars moving across the screen using CSS custom properties */
+        @keyframes moveStars {
+            0% { transform: translate(0px, 0px); }
+            100% { transform: translate(var(--moveX), var(--moveY)); }
+        }
+
+        /* Timer display showing elapsed time in the top-right corner */
+        .timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            z-index: 1000;
+        }
+
+        /* Base styling for planet containers that move across the screen */
+        .planet-container {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        /* Ensures planet images scale properly within their containers */
+        .planet-container img {
+            width: 100%;
+            height: auto;
+        }
+
+        /* Specific sizes for each planet container */
+        .earth-container { width: 100px; }
+        .jupiter-container { width: 200px; }
+        .saturn-container { width: 150px; }
+        .neptune-container { width: 130px; }
+        .sun-container { width: 300px; } /* Added size for Sun */
+
+        /* Base styling for meteors that streak across the screen */
+        .meteor {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* Tail effect for right-to-left meteors */
+        .meteor.right-to-left::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(to right, white, transparent);
+            left: 4px;
+        }
+
+        /* Tail effect for left-to-right meteors */
+        .meteor.left-to-right::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(to left, white, transparent);
+            transform: translateX(-100%);
+        }
+
+        /* Tail effect for vertical meteors moving down */
+        .meteor.center-to-bottom::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 100px;
+            background: linear-gradient(to bottom, white, transparent);
+            top: 4px;
+        }
+
+        /* Tail effect for vertical meteors moving up */
+        .meteor.bottom-to-top::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 100px;
+            background: linear-gradient(to top, white, transparent);
+            bottom: 4px;
+        }
+
+        /* Animation for meteors moving from right to left at 20% height */
+        @keyframes meteorRightToLeft {
+            0% { transform: translate(100vw, 20vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(-100vw, 20vh); opacity: 0; }
+        }
+
+        /* Animation for meteors moving from left to right near the top (10% height) */
+        @keyframes meteorLeftToRight {
+            0% { transform: translate(-100vw, 10vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(100vw, 10vh); opacity: 0; }
+        }
+
+        /* Animation for meteors moving from bottom to top through center */
+        @keyframes meteorCenterToBottom {
+            0% { transform: translate(50vw, 110vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(50vw, -10vh); opacity: 0; }
+        }
+
+        /* Animation for meteors moving from top to bottom through center */
+        @keyframes meteorBottomToTop {
+            0% { transform: translate(20vw, -10vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(20vw, 100vh); opacity: 0; }
+        }
+
+        /* New shadow styling for bottom glow effect */
+        .bottom-shadow {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.3), transparent);
+            opacity: 0; /* Initially hidden */
+            transition: opacity 0.5s ease-in-out;
+            z-index: 500; /* Above stars but below planets */
+            pointer-events: none;
+        }
+
+        /* Responsive adjustments for planet sizes on medium screens */
+        @media (max-width: 768px) {
+            .earth-container { width: 80px; }
+            .jupiter-container { width: 160px; }
+            .saturn-container { width: 120px; }
+            .neptune-container { width: 104px; }
+            .sun-container { width: 240px; } /* Added responsive size for Sun */
+        }
+
+        /* Responsive adjustments for planet sizes on small screens */
+        @media (max-width: 480px) {
+            .earth-container { width: 60px; }
+            .jupiter-container { width: 120px; }
+            .saturn-container { width: 90px; }
+            .neptune-container { width: 78px; }
+            .sun-container { width: 180px; } /* Added responsive size for Sun */
+        }
+    </style>
+</head>
+<body>
+    <!-- Timer display showing elapsed time since page load -->
+    <div class="timer">Time: <span id="timeDisplay">0:00</span></div>
+    
+    <!-- Container for dynamically generated stars -->
+    <div class="stars"></div>
+    
+    <!-- Earth planet container with its image -->
+    <div class="planet-container earth-container">
+        <img src="earth.svg" alt="Earth">
+    </div>
+
+    <!-- Jupiter planet container with its image -->
+    <div class="planet-container jupiter-container">
+        <img src="jupiter.svg" alt="Jupiter">
+    </div>
+
+    <!-- Saturn planet container with Mars image (note: filename mismatch) -->
+    <div class="planet-container saturn-container">
+        <img src="Mars.svg" alt="Saturn">
+    </div>
+    
+    <!-- Second Saturn container with Neptune image (note: duplicate class) -->
+    <div class="planet-container saturn-container">
+        <img src="Neptune.svg.svg" alt="Saturn">
+    </div>
+
+    <!-- Neptune planet container with its image -->
+    <div class="planet-container neptune-container">
+        <img src="neptune.svg" alt="Neptune">
+    </div>
+
+    <!-- Sun planet container with its image -->
+    <div class="planet-container sun-container">
+        <img src="Sun.svg" alt="Sun">
+    </div>
+
+    <!-- New shadow div at the bottom -->
+    <div class="bottom-shadow"></div>
+
+    <script>
+        // Select key DOM elements for manipulation
+        const starContainer = document.querySelector('.stars');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const earthContainer = document.querySelector('.earth-container');
+        const jupiterContainer = document.querySelector('.jupiter-container');
+        const saturnContainer = document.querySelector('.saturn-container');
+        const neptuneContainer = document.querySelector('.neptune-container');
+        const sunContainer = document.querySelector('.sun-container');
+        const bottomShadow = document.querySelector('.bottom-shadow'); // Select shadow element
+        const numStars = window.innerWidth < 600 ? 50 : 100; // Fewer stars on small screens
+        let startTime = Date.now(); // Record start time for timer
+
+        // Function to create right-to-left meteors with cleanup
+        function createRightToLeftMeteor() {
+            const meteor = document.createElement('div');
+            meteor.className = 'meteor right-to-left';
+            document.body.appendChild(meteor);
+            meteor.style.animation = 'meteorRightToLeft 4s linear';
+            meteor.addEventListener('animationend', () => meteor.remove());
+        }
+
+        // Function to create left-to-right meteors with cleanup
+        function createLeftToRightMeteor() {
+            const meteor = document.createElement('div');
+            meteor.className = 'meteor left-to-right';
+            document.body.appendChild(meteor);
+            meteor.style.animation = 'meteorLeftToRight 4s linear';
+            meteor.addEventListener('animationend', () => meteor.remove());
+        }
+
+        // Function to create center-to-bottom meteors with cleanup
+        function createCenterToBottomMeteor() {
+            const meteor = document.createElement('div');
+            meteor.className = 'meteor center-to-bottom';
+            document.body.appendChild(meteor);
+            meteor.style.animation = 'meteorCenterToBottom 4s linear';
+            meteor.addEventListener('animationend', () => meteor.remove());
+        }
+
+        // Function to create bottom-to-top meteors with cleanup
+        function createBottomToTopMeteor() {
+            const meteor = document.createElement('div');
+            meteor.className = 'meteor bottom-to-top';
+            document.body.appendChild(meteor);
+            meteor.style.animation = 'meteorBottomToTop 4s linear';
+            meteor.addEventListener('animationend', () => meteor.remove());
+        }
+
+        // Schedule meteor appearances with initial delays and repetition
+        setTimeout(() => {
+            createRightToLeftMeteor();
+            setInterval(createRightToLeftMeteor, 20000); // Every 20 seconds
+        }, 25000); // Starts after 35 seconds
+
+        setTimeout(() => {
+            createLeftToRightMeteor();
+            setInterval(createLeftToRightMeteor, 400000); // Every 10 seconds
+        }, 35000); // Starts after 45 seconds
+
+        setTimeout(() => {
+            createCenterToBottomMeteor();
+            setInterval(createCenterToBottomMeteor, 300000); // Every 10 seconds
+        }, 55000); // Starts after 75 seconds
+
+        setTimeout(() => {
+            createBottomToTopMeteor();
+            setInterval(createBottomToTopMeteor, 220000); // Every 10 seconds
+        }, 45000); // Starts after 45 seconds
+
+        // Updated function to favor right-side starting positions
+        function getRandomPosition(isLongDuration = false) {
+            const random = Math.random();
+            let startX, startY, endX, endY;
+
+            // 70% chance to start from the right side
+            if (random < 0.7) {
+                startX = 100 + Math.random() * 20; // Start beyond right edge (100-120vw)
+                startY = Math.random() * 120 - 20; // Anywhere vertically (-20 to 100vh)
+            } else {
+                // 30% chance to start from other positions (left, top, bottom)
+                const side = Math.floor(Math.random() * 3); // 0: left, 1: top, 2: bottom
+                if (side === 0) { // Left
+                    startX = -20 - Math.random() * 20; // Beyond left edge (-20 to -40vw)
+                    startY = Math.random() * 120 - 20;
+                } else if (side === 1) { // Top
+                    startX = Math.random() * 140 - 20; // Anywhere horizontally (-20 to 120vw)
+                    startY = -20 - Math.random() * 20; // Beyond top edge (-20 to -40vh)
+                } else { // Bottom
+                    startX = Math.random() * 140 - 20;
+                    startY = 100 + Math.random() * 20; // Beyond bottom edge (100-120vh)
+                }
+            }
+
+            // End position can be anywhere
+            endX = Math.random() * 140 - 20; // -20 to 120vw
+            endY = Math.random() * 120 - 20; // -20 to 100vh
+
+            const duration = isLongDuration ? 
+                Math.random() * 15 + 25 : // 25-40 seconds
+                Math.random() * 10 + 15;  // 15-25 seconds
+            return {
+                start: { x: startX, y: startY },
+                end: { x: endX, y: endY },
+                duration,
+                scale: {
+                    start: Math.random() * 0.5 + 0.5, // 0.5-1.0
+                    end: Math.random() * 1.5 + 1.0    // 1.0-2.5
+                }
+            };
+        }
+
+        // Create and apply dynamic animations to planets
+        function createPlanetAnimation(planet, delay = 0, isLongDuration = false) {
+            const pos = getRandomPosition(isLongDuration);
+            planet.style.animation = 'none'; // Reset animation
+            planet.offsetHeight; // Trigger reflow
+            const keyframeName = `movePlanet${Date.now()}`; // Unique animation name
+            const keyframes = `
+                @keyframes ${keyframeName} {
+                    0% {
+                        transform: translate(${pos.start.x}vw, ${pos.start.y}vh) scale(${pos.scale.start});
+                        opacity: 0;
+                    }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% {
+                        transform: translate(${pos.end.x}vw, ${pos.end.y}vh) scale(${pos.scale.end});
+                        opacity: 0;
+                    }
+                }
+            `;
+            const styleSheet = document.createElement('style');
+            styleSheet.textContent = keyframes;
+            document.head.appendChild(styleSheet);
+            planet.style.animation = `${keyframeName} ${pos.duration}s linear ${delay}s forwards`;
+            // Restart animation after completion
+            setTimeout(() => {
+                createPlanetAnimation(planet, 0, isLongDuration);
+            }, (pos.duration + delay) * 1000);
+        }
+
+        // Updated Sun animation to favor right-side start
+        function createSunAnimation(planet, delay = 0) {
+            const random = Math.random();
+            let startX, startY;
+            const duration = 20; // Fixed 20-second duration for Sun
+
+            // 70% chance to start from the right side
+            if (random < 0.7) {
+                startX = 100 + Math.random() * 20; // Start beyond right edge (100-120vw)
+                startY = Math.random() * 120 - 20; // Anywhere vertically (-20 to 100vh)
+            } else {
+                // 30% chance to start from other positions
+                const side = Math.floor(Math.random() * 3); // 0: left, 1: top, 2: bottom
+                if (side === 0) { // Left
+                    startX = -20 - Math.random() * 20; // Beyond left edge (-20 to -40vw)
+                    startY = Math.random() * 120 - 20;
+                } else if (side === 1) { // Top
+                    startX = Math.random() * 140 - 20; // Anywhere horizontally (-20 to 120vw)
+                    startY = -20 - Math.random() * 20; // Beyond top edge (-20 to -40vh)
+                } else { // Bottom
+                    startX = Math.random() * 140 - 20;
+                    startY = 100 + Math.random() * 20; // Beyond bottom edge (100-120vh)
+                }
+            }
+
+            planet.style.animation = 'none'; // Reset animation
+            planet.offsetHeight; // Trigger reflow
+            const keyframeName = `moveSun${Date.now()}`;
+            const keyframes = `
+                @keyframes ${keyframeName} {
+                    0% {
+                        transform: translate(${startX}vw, ${startY}vh) scale(1);
+                        opacity: 0;
+                    }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% {
+                        transform: translate(50vw, 100vh) scale(1.5); // Still ends at bottom center
+                        opacity: 0;
+                    }
+                }
+            `;
+            const styleSheet = document.createElement('style');
+            styleSheet.textContent = keyframes;
+            document.head.appendChild(styleSheet);
+            planet.style.animation = `${keyframeName} ${duration}s linear ${delay}s forwards`;
+            // Restart animation after completion
+            setTimeout(() => {
+                createSunAnimation(planet, 0);
+            }, (duration + delay) * 1000);
+        }
+
+        // Generate and style background stars dynamically
+        function createStars() {
+            starContainer.innerHTML = ''; // Clear existing stars
+            for (let i = 0; i < numStars; i++) {
+                let star = document.createElement('div');
+                star.classList.add('star');
+                let randomSize = Math.random();
+                let size = randomSize < 0.5 ? 
+                    Math.random() * 1.5 + 0.5 : // 0.5-2px
+                    Math.random() * 2.5 + 1;    // 1-3.5px
+                let posX = Math.random() * window.innerWidth;
+                let posY = Math.random() * window.innerHeight;
+                let duration = Math.random() * 8 + 5; // 5-13 seconds
+                let opacity = Math.random() * 0.7 + 0.3; // 0.3-1.0
+                let moveX = (Math.random() - 0.5) * 50; // -25 to 25px
+                let moveY = (Math.random() - 0.5) * 50; // -25 to 25px
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${posX}px`;
+                star.style.top = `${posY}px`;
+                star.style.animationDuration = `${duration}s, ${duration * 2}s`;
+                star.style.opacity = opacity;
+                star.style.setProperty('--moveX', `${moveX}px`);
+                star.style.setProperty('--moveY', `${moveY}px`);
+                starContainer.appendChild(star);
+            }
+        }
+
+        // Update the timer display every frame
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            requestAnimationFrame(updateTimer);
+        }
+
+        // Show shadow when scrolling starts
+        function handleScroll() {
+            if (window.scrollY > 0) {
+                bottomShadow.style.opacity = '1';
+            } else {
+                bottomShadow.style.opacity = '0';
+            }
+        }
+
+        // Initial setup: create stars and start timer
+        createStars();
+        updateTimer();
+        
+        // Start planet animations with unique delays and durations
+        createPlanetAnimation(earthContainer, 1, false);    // Earth: 1s delay, short duration
+        createPlanetAnimation(jupiterContainer, 8, false);  // Jupiter: 8s delay, short duration
+        createPlanetAnimation(saturnContainer, 4, true);    // Saturn: 4s delay, long duration
+        createPlanetAnimation(neptuneContainer, 6, false);  // Neptune: 6s delay, short duration
+        createSunAnimation(sunContainer, 2);                // Sun: 2s delay, mostly from right
+
+        // Recreate stars on window resize for responsive layout
+        window.addEventListener('resize', createStars);
+
+        // Add scroll event listener to show/hide shadow
+        window.addEventListener('scroll', handleScroll);
+    </script>
+</body>
+</html>
